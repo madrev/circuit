@@ -11,6 +11,12 @@ button {
   background-color: green;
 }
 
+.current-exercise {
+  height: 200px;
+  background-color: yellow;
+  font-weight: 600;
+}
+
 .App-logo {
   animation: App-logo-spin infinite 20s linear;
   height: 80px;

@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import beep from './beep';
+import EXERCISES from './exercises';
+
 
 class App extends Component {
   constructor(props) {
@@ -11,7 +13,10 @@ class App extends Component {
       currentMode: 'station',
       stationSeconds: 10,
       breakSeconds: 15,
-      secondsLeft: null
+      secondsLeft: null,
+      stationType: 'aerial',
+      completedExercises: [],
+      currentExercise: null
     };
     this.tick = this.tick.bind(this);
     this.startCircuit = this.startCircuit.bind(this);
@@ -20,15 +25,16 @@ class App extends Component {
     this.reset = this.reset.bind(this);
     this.handleStationLengthChange = this.handleStationLengthChange.bind(this);
     this.handleBreakLengthChange = this.handleBreakLengthChange.bind(this);
+    this.setNewExercise = this.setNewExercise.bind(this);
+  }
+
+  componentWillMount() {
+    this.setNewExercise();
   }
 
   componentDidUpdate(){
     if (!this.state.running) return;
-    if (this.state.secondsLeft === 0) {
-      this.switchModes();
-    } else {
-      window.timeout = setTimeout(this.tick, 1000);
-    }
+    if (this.state.secondsLeft === 0) this.switchModes();
   }
 
   handleStationLengthChange(event) {
@@ -45,11 +51,13 @@ class App extends Component {
   }
 
   tick() {
-    this.setState({ secondsLeft: this.state.secondsLeft - 1 });
+    window.timeout = setTimeout(() => {
+      this.setState({ secondsLeft: this.state.secondsLeft - 1}, this.tick);
+    }, 1000);
   }
 
   startCircuit() {
-    this.setState({ running: true, secondsLeft: this.state.stationSeconds });
+    this.setState({ running: true, secondsLeft: this.state.stationSeconds }, this.tick);
   }
 
   pause() {
@@ -59,6 +67,7 @@ class App extends Component {
 
   unpause() {
     this.setState({ running: true });
+    this.tick();
   }
 
   reset() {
@@ -66,12 +75,34 @@ class App extends Component {
     clearTimeout(window.timeout);
   }
 
-  switchModes() {
-    const newMode = this.state.currentMode === 'station' ? 'break' : 'station';
-    this.setState({
-      currentMode: newMode,
-      secondsLeft: this.state[`${newMode}Seconds`]
+  switchStationType() {
+    const newStationType = this.state.stationType === 'aerial' ? 'ground' : 'aerial';
+    this.setState({ stationType: newStationType }, this.setNewExercise);
+  }
+
+  setNewExercise() {
+    const exerciseSet = EXERCISES[this.state.stationType].filter((exercise) => {
+      return exercise !== this.state.currentExercise &&
+            this.state.completedExercises.indexOf(exercise)=== -1;
     });
+    const newExercise = exerciseSet[Math.floor(Math.random()*exerciseSet.length)];
+    this.setState({ currentExercise: newExercise });
+  }
+
+  switchModes() {
+    if (this.state.currentMode === 'station') {
+      this.setState({
+        currentMode: 'break',
+        completedExercises: [...this.state.completedExercises, this.state.currentExercise],
+        secondsLeft: this.state.breakSeconds
+      });
+      this.switchStationType();
+    } else if (this.state.currentMode === 'break') {
+      this.setState({
+        currentMode: 'station',
+        secondsLeft: this.state.stationSeconds
+      });
+    }
     this.beep();
   }
 
@@ -92,6 +123,7 @@ class App extends Component {
         {this.state.running ? <button onClick={this.pause}>Pause</button> : <button onClick={this.unpause}>Unpause</button>  }
         <p>{this.state.currentMode}</p>
         <p>{this.state.secondsLeft}</p>
+        <div className="current-exercise" onClick={this.setNewExercise}>{this.state.currentExercise}</div>
       </div>
     );
   }
